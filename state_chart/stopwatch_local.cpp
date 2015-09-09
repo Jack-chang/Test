@@ -4,13 +4,25 @@
 
 #include <boost/statechart/transition.hpp>
 
+#include <iostream>
+
 namespace sc = boost::statechart;
+
+struct IElapsedTime
+{
+   virtual double ElapsedTime() const = 0;
+};
 
 struct EvStartStop : sc::event< EvStartStop > {};
 struct EvReset : sc::event< EvReset > {};
 
 struct Active;
-struct StopWatch : sc::state_machine< StopWatch, Active > {};
+struct StopWatch : sc::state_machine< StopWatch, Active > {
+	double ElapsedTime() const
+	{
+		return state_cast< const IElapsedTime & >().ElapsedTime();
+	}
+};
 
 struct Stopped;
 
@@ -24,7 +36,7 @@ struct Stopped;
 
 // Active is the outermost state and therefore needs to pass the
 // state machine class it belongs to
-struct Active : sc::simple_state<Active, StopWatch, Stopped > {
+struct Active :  IElapsedTime, sc::simple_state<Active, StopWatch, Stopped > {
     typedef sc::transition< EvReset, Active > reactions;
 
      Active() : elapsedTime_( 0.0 ) {}
@@ -36,12 +48,17 @@ struct Active : sc::simple_state<Active, StopWatch, Stopped > {
 
 // Stopped and Running both specify Active as their Context,
 // which makes them nested inside Active
-struct Running : sc::simple_state< Running, Active > {
+struct Running :  IElapsedTime, sc::simple_state< Running, Active > {
   typedef sc::transition< EvStartStop, Stopped > reactions;
   
   Running() : startTime_( std::time( 0 ) ) {}
+  virtual double ElapsedTime() const
+  {
+	return context< Active >().ElapsedTime() +
+	std::difftime( std::time( 0 ), startTime_ );
+  }
 ~Running()
-{
+ {
       // Similar to when a derived class object accesses its
       // base class portion, context<>() is used to gain
       // access to the direct or indirect context of a state.
@@ -55,6 +72,10 @@ std::time_t startTime_;
 };
 struct Stopped : sc::simple_state< Stopped, Active > {
    typedef sc::transition< EvStartStop, Running > reactions;
+   virtual double ElapsedTime() const
+   {
+	return context< Active >().ElapsedTime();
+   }
 };
 
 // Because the context of a state must be a complete type (i.e.
@@ -69,11 +90,16 @@ int main()
 {
   StopWatch myWatch;
   myWatch.initiate();
-  
-   myWatch.process_event( EvStartStop() );
-   myWatch.process_event( EvStartStop() );
-   myWatch.process_event( EvStartStop() );
-   myWatch.process_event( EvReset() );
+  std::cout << myWatch.ElapsedTime() << "\n";
+  myWatch.process_event( EvStartStop() );
+  std::cout << myWatch.ElapsedTime() << "\n";
+  myWatch.process_event( EvStartStop() );
+  std::cout << myWatch.ElapsedTime() << "\n";
+  myWatch.process_event( EvStartStop() );
+  std::cout << myWatch.ElapsedTime() << "\n";
+  myWatch.process_event( EvReset() );
+  std::cout << myWatch.ElapsedTime() << "\n";
+
 
   return 0;
 }
