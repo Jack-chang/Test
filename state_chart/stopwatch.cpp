@@ -2,6 +2,8 @@
 #include <boost/statechart/state_machine.hpp>
 #include <boost/statechart/simple_state.hpp>
 
+#include <boost/statechart/transition.hpp>
+
 namespace sc = boost::statechart;
 
 struct EvStartStop : sc::event< EvStartStop > {};
@@ -22,13 +24,18 @@ struct Stopped;
 
 // Active is the outermost state and therefore needs to pass the
 // state machine class it belongs to
-struct Active : sc::simple_state<
-  Active, StopWatch, Stopped > {};
+struct Active : sc::simple_state<Active, StopWatch, Stopped > {
+    typedef sc::transition< EvReset, Active > reactions;
+  };
 
 // Stopped and Running both specify Active as their Context,
 // which makes them nested inside Active
-struct Running : sc::simple_state< Running, Active > {};
-struct Stopped : sc::simple_state< Stopped, Active > {};
+struct Running : sc::simple_state< Running, Active > {
+  typedef sc::transition< EvStartStop, Stopped > reactions;
+};
+struct Stopped : sc::simple_state< Stopped, Active > {
+   typedef sc::transition< EvStartStop, Running > reactions;
+};
 
 // Because the context of a state must be a complete type (i.e.
 // not forward declared), a machine must be defined from
@@ -42,5 +49,11 @@ int main()
 {
   StopWatch myWatch;
   myWatch.initiate();
+  
+   myWatch.process_event( EvStartStop() );
+   myWatch.process_event( EvStartStop() );
+   myWatch.process_event( EvStartStop() );
+   myWatch.process_event( EvReset() );
+
   return 0;
 }
