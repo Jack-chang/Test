@@ -9,7 +9,6 @@
  namespace sc = boost::statechart;
   
   
-  
  class EvtStartStop : public sc::event<EvtStartStop>{};
  class EvtReset : public sc::event<EvtReset>{};
  class EvtGo : public sc::event<EvtGo>{};
@@ -22,9 +21,6 @@
   
  class Machine : public sc::state_machine<Machine, MainState>
  {};
-  
-  
-  
   
   
   
@@ -95,7 +91,7 @@
   };
   
   
-  int _tmain(int argc, _TCHAR* argv[])
+  int main(int argc, char* argv[])
   {
      Machine mc;
      mc.initiate();
